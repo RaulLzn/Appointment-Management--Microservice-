@@ -1,61 +1,64 @@
 package upb.safi.AppointmentManagement.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import upb.safi.AppointmentManagement.client.DependencyClient;
-import upb.safi.AppointmentManagement.client.ResponsibleClient;
-import upb.safi.AppointmentManagement.client.StudentClient;
 import upb.safi.AppointmentManagement.model.dto.AppointmentDTO;
+import upb.safi.AppointmentManagement.model.dto.AppointmentDetailsDTO;
 import upb.safi.AppointmentManagement.model.entity.Appointment;
-import upb.safi.AppointmentManagement.repository.AppointmentRepository;
 
 import java.util.List;
-import java.util.Optional;
 
-@Service
-public class AppointmentService {
+/**
+ * AppointmentService
+ *
+ * This interface defines the contract for the service layer responsible for managing appointments.
+ * It provides methods for creating, retrieving, and retrieving detailed information about appointments.
+ */
+public interface AppointmentService {
 
-    @Autowired
-    private AppointmentRepository appointmentRepository;
+    /**
+     * Creates a new appointment based on the provided AppointmentDTO.
+     *
+     * @param appointmentDTO the data transfer object containing appointment details
+     * @return the created Appointment entity
+     */
+    Appointment createAppointment(AppointmentDTO appointmentDTO);
 
-    @Autowired
-    private StudentClient studentClient;
+    /**
+     * Retrieves an appointment by its ID.
+     *
+     * @param id the ID of the appointment to retrieve
+     * @return the Appointment entity associated with the given ID
+     */
+    Appointment getAppointment(Long id);
 
-    @Autowired
-    private ResponsibleClient responsibleClient;
+    /**
+     * Retrieves detailed information about an appointment by its ID.
+     *
+     * @param id the ID of the appointment to retrieve
+     * @return an AppointmentDetailsDTO containing detailed information about the appointment
+     */
+    AppointmentDetailsDTO getAppointmentDetails(Long id);
 
-    @Autowired
-    private DependencyClient dependencyClient;
+    /**
+     * Retrieves a list of Appointment entities associated with the given responsible ID.
+     *
+     * @param id the ID of the responsible person to retrieve the appointments
+     * @return a list of Appointment entities associated with the given responsible person ID
+     */
+    List<Appointment> getAppointmentsDetailsByResponsibleId(Long id);
 
-    public Appointment createAppointment(AppointmentDTO appointmentDTO) {
-        // Obtenemos las entidades relacionadas mediante Feign
-        var responsible = responsibleClient.getResponsibleById(appointmentDTO.getResponsibleId());
-        var student = studentClient.getStudentById(appointmentDTO.getStudentId());
-        var dependency = dependencyClient.getDependencyById(appointmentDTO.getDependencyId());
 
-        // Creamos la cita
-        Appointment appointment = new Appointment();
-        appointment.setResponsible(responsible);
-        appointment.setStudent(student);
-        appointment.setDependency(dependency);
-        appointment.setRequestTimestamp(appointmentDTO.getRequestTimestamp());
-        appointment.setAppointmentTimestamp(appointmentDTO.getAppointmentTimestamp());
-        appointment.setMode(appointmentDTO.getMode());
-        appointment.setStatus(appointmentDTO.getStatus());
-        appointment.setReason(appointmentDTO.getReason());
+    /**
+     * Retrieves a list of Appointment entities associated with the given student ID.
+     *
+     * @param id the ID of the student to retrieve the appointments
+     * @return a list of Appointment entities associated with the given student ID
+     */
+    List<Appointment> getAppointmentsDetailsByStudentId(Long id);
 
-        return appointmentRepository.save(appointment);
-    }
-
-    public List<Appointment> getAllAppointments() {
-        return appointmentRepository.findAll();
-    }
-
-    public Optional<Appointment> getAppointmentById(Long appointmentId) {
-        return appointmentRepository.findById(appointmentId);
-    }
-
-    public void deleteAppointment(Long appointmentId) {
-        appointmentRepository.deleteById(appointmentId);
-    }
+    /**
+     * Cancels an appointment by its ID.
+     *
+     * @param id the ID of the appointment to cancel
+     */
+    void cancelAppointment(Long id);
 }

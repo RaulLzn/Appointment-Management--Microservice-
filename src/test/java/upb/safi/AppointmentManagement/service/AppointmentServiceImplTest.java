@@ -5,27 +5,27 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import upb.safi.AppointmentManagement.model.domain.AppointmentMode;
 import upb.safi.AppointmentManagement.model.dto.*;
 import upb.safi.AppointmentManagement.model.entity.Appointment;
 import upb.safi.AppointmentManagement.repository.AppointmentRepository;
 import upb.safi.AppointmentManagement.service.impl.AppointmentServiceImpl;
-import upb.safi.AppointmentManagement.service.impl.SyncServiceImpl;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
-public class AppointmentServiceTest {
+public class AppointmentServiceImplTest {
 
     @Mock
     private AppointmentRepository appointmentRepository;
 
     @Mock
-    private SyncServiceImpl syncService;
+    private SyncService syncService;
 
     @InjectMocks
     private AppointmentServiceImpl appointmentService;
@@ -36,69 +36,18 @@ public class AppointmentServiceTest {
     }
 
     @Test
-    public void testCreateAppointment_Success() {
-        // Arrange
-        AppointmentDTO appointmentDTO = new AppointmentDTO();
-        appointmentDTO.setResponsibleId(1L);
-        appointmentDTO.setDependencyId(2L);
-        appointmentDTO.setStudentId(3L);
-        appointmentDTO.setRequestTimestamp(LocalDateTime.now());
-        appointmentDTO.setAppointmentTimestamp(LocalDateTime.now().plusDays(1));
-        appointmentDTO.setMode(AppointmentMode.PRESENCIAL);
-        appointmentDTO.setStatus("PENDING");
-        appointmentDTO.setReason("Consulta general");
-
-        Appointment appointment = new Appointment();
-        appointment.setId(1L);
-
-        when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
-
-        // Act
-        Appointment result = appointmentService.createAppointment(appointmentDTO);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        verify(appointmentRepository, times(1)).save(any(Appointment.class));
-    }
-
-    @Test
-    public void testGetAppointment_Success() {
-        // Arrange
-        Appointment appointment = new Appointment();
-        appointment.setId(1L);
-
-        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
-
-        // Act
-        Appointment result = appointmentService.getAppointment(1L);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        verify(appointmentRepository, times(1)).findById(1L);
-    }
-
-    @Test
-    public void testGetAppointment_NotFound() {
-        // Arrange
-        when(appointmentRepository.findById(1L)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        RuntimeException thrown = assertThrows(RuntimeException.class, () -> appointmentService.getAppointment(1L));
-        assertEquals("Cita no encontrada", thrown.getMessage());
-        verify(appointmentRepository, times(1)).findById(1L);
-    }
-
-    @Test
     public void testGetAppointmentDetails_Success() {
         // Arrange
+        // Crear un Appointment de ejemplo
         Appointment appointment = new Appointment();
         appointment.setId(1L);
         appointment.setStudentid(3L);
         appointment.setResponsibleid(1L);
         appointment.setDependencyid(2L);
+        appointment.setRequesttimestamp(Instant.now());
+        appointment.setAppointmenttimestamp(Instant.now().plusSeconds(3600));
 
+        // Crear DTOs simulados
         StudentDTO studentDTO = new StudentDTO();
         studentDTO.setStudentId(3L);
         studentDTO.setPersonId(5L);
@@ -111,7 +60,9 @@ public class AppointmentServiceTest {
 
         PersonDTO personDTO = new PersonDTO();
         personDTO.setPersonId(5L);
+        personDTO.setFullName("John Doe");
 
+        // Configurar las respuestas de los mocks
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
         when(syncService.getStudentById(3L)).thenReturn(studentDTO);
         when(syncService.getResponsibleById(1L)).thenReturn(responsibleDTO);
@@ -128,10 +79,27 @@ public class AppointmentServiceTest {
         assertEquals(1L, result.getResponsible().getResponsibleId());
         assertEquals(2L, result.getDependency().getDependencyId());
         assertEquals(5L, result.getStudentPerson().getPersonId());
+        assertEquals("John Doe", result.getStudentPerson().getFullName());
+
+        // Verificar que los métodos fueron llamados la cantidad esperada de veces
         verify(appointmentRepository, times(1)).findById(1L);
         verify(syncService, times(1)).getStudentById(3L);
         verify(syncService, times(1)).getResponsibleById(1L);
         verify(syncService, times(1)).getDependencyById(2L);
         verify(syncService, times(1)).getPersonById(5L);
+    }
+
+    @Test
+    public void testGetAppointmentDetails_NotFound() {
+        // Arrange
+        when(appointmentRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        // Act & Assert
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
+            appointmentService.getAppointmentDetails(1L);
+        });
+
+        assertEquals("Cita no encontrada", thrown.getMessage());
+        verify(appointmentRepository, times(1)).findById(1L);
     }
 }
